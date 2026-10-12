@@ -8,3 +8,7 @@ Demo mode (default): data in browser localStorage, demo logins shown on login pa
 3. Build → Firestore Database → Create (production mode, region asia-south1) → Rules tab → paste `firestore.rules` → Publish.
 4. Paste config into `config.js` (`window.FIREBASE_CONFIG = {...}`) and push.
 5. First person to sign in (Team Login) becomes admin. Admin then creates team & client logins from the Team page.
+
+## Credits
+UI layout inspired by common work-management apps and open-source boards
+(Kanboard – MIT, WeKan – MIT). Ideas only; no third-party code copied. Mascot © Sparrow Web Solutions.

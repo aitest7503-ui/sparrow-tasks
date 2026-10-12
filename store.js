@@ -80,7 +80,7 @@ function demoData() {
 }
 
 class LocalAdapter {
-  constructor() { this.mode = 'demo'; this.key = 'sparrow-tasks-v1'; this.subs = []; }
+  constructor() { this.mode = 'demo'; this.key = 'sparrow-tasks-v2'; this.subs = []; }
   async init() {
     try { this.data = JSON.parse(localStorage.getItem(this.key)); } catch (e) { }
     if (!this.data) { this.data = demoData(); this.persist(); }
