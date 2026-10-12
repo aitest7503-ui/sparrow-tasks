@@ -1,0 +1,50 @@
+rules_version = '2';
+// Sparrow Tasks security rules: two kinds of logins.
+//  /users/{email}           role: 'admin' | 'member' | 'client', clientId (for clients)
+//  /teams/sparrow/{coll}/{id}  internal data (clients, tasks incl. internal comments, updates) -> TEAM ONLY
+//  /portals/{clientId}      sanitized copy for one client (no internal comments) -> that client + team
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function signedIn() { return request.auth != null && request.auth.token.email != null; }
+    function me() { return /databases/$(db)/documents/users/$(request.auth.token.email.lower()); }
+    function hasUser() { return signedIn() && exists(me()); }
+    function role() { return get(me()).data.role; }
+    function team() { return hasUser() && role() in ['admin','member']; }
+    function admin() { return hasUser() && role() == 'admin'; }
+
+    match /users/{email} {
+      // own profile, or team can see everyone
+      allow get: if signedIn() && request.auth.token.email.lower() == email || team();
+      allow list: if team();
+      // bootstrap: very first login becomes admin (only while meta/bootstrap is absent)
+      allow create: if admin() || (signedIn() && request.auth.token.email.lower() == email
+                       && request.resource.data.role == 'admin'
+                       && !exists(/databases/$(db)/documents/meta/bootstrap));
+      allow update, delete: if admin();   // only admin creates/edits team + client logins
+    }
+    match /meta/{doc} {
+      allow read: if signedIn();
+      allow write: if hasUser() && role() == 'admin';
+    }
+    match /teams/sparrow/{coll}/{id} {
+      allow read, write: if team();       // clients can NEVER read internal data
+    }
+    // Tickets: client can create/read/reply only for their own clientId; cannot change assignee or clientId.
+    // Internal notes are NOT here – they live in /teams/sparrow/notes (team only).
+    function myClient() { return get(me()).data.clientId; }
+    match /tickets/{id} {
+      allow read: if team() || (hasUser() && role() == 'client' && resource.data.clientId == myClient());
+      allow create: if team() || (hasUser() && role() == 'client' && request.resource.data.clientId == myClient()
+                       && request.resource.data.status == 'new' && request.resource.data.assignee == null);
+      allow update: if team() || (hasUser() && role() == 'client' && resource.data.clientId == myClient()
+                       && request.resource.data.clientId == resource.data.clientId
+                       && request.resource.data.assignee == resource.data.assignee
+                       && request.resource.data.status in ['new','progress','waiting','resolved','closed']);
+      allow delete: if admin();
+    }
+    match /portals/{clientId} {
+      allow read: if team() || (hasUser() && role() == 'client' && get(me()).data.clientId == clientId);
+      allow write: if team();
+    }
+  }
+}
