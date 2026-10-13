@@ -39,7 +39,7 @@ function render() {
   const banner = S.mode === 'demo' ? `<div class="banner">DEMO MODE · sample data saved only in this browser · <a href="#" onclick="S.resetDemo();toast('Demo data reset');return false">Reset demo</a></div>` : '';
   if (!u) return $('#app').innerHTML = banner + loginView();
   if (u.role === 'client') { if (!['portal', 'ctickets', 'cticket', 'cnew'].includes(h[0])) return go('/portal'); return $('#app').innerHTML = banner + clientShell(h); }
-  if (!['home', 'my', 'inbox', 'tickets', 'reporting', 'project', 'templates', 'team', 'clients'].includes(h[0])) return go('/home');
+  if (!['home', 'my', 'inbox', 'tickets', 'reporting', 'project', 'templates', 'team', 'clients', 'portfolios'].includes(h[0])) return go('/home');
   const sy = $('.content')?.scrollTop;
   $('#app').innerHTML = banner + teamShell(h); bindDnD();
   if (sy) $('.content').scrollTop = sy;
@@ -81,8 +81,8 @@ function notifs() {
 // ---------- TEAM SHELL ----------
 function teamShell(h) {
   const d = D(), u = me(), nt = S.tickets().filter(t => t.status === 'new' || unreadTeam(t)).length, ni = notifs().filter(n => n.unread).length;
-  const nav = [['home', '🏠', 'Home'], ['inbox', '🔔', 'Inbox', ni], ['my', '✅', 'My tasks'], ['tickets', '🎫', 'Tickets', nt], ['reporting', '📊', 'Reporting']];
-  const views = { home: homeView, my: myView, inbox: inboxView, tickets: () => ticketsView(h[1]), reporting: reportView, project: () => projectView(h[1], h[2]), templates: templatesView, team: teamView, clients: teamView };
+  const nav = [['home', '🏠', 'Home'], ['inbox', '🔔', 'Inbox', ni], ['my', '✅', 'My tasks'], ['tickets', '🎫', 'Tickets', nt], ['reporting', '📊', 'Reporting'], ['portfolios', '🗂', 'Portfolios']];
+  const views = { home: homeView, my: myView, inbox: inboxView, tickets: () => ticketsView(h[1]), reporting: reportView, project: () => projectView(h[1], h[2]), templates: templatesView, portfolios: portfoliosView, team: teamView, clients: teamView };
   const body = views[h[0]]();
   return `<div class="shell ${ui.collapsed ? 'collapsed' : ''} ${ui.drawer ? 'drawer' : ''}">
   <header class="topbar"><button class="iconbtn" aria-label="Menu" onclick="toggleSide()">☰</button>
@@ -90,9 +90,9 @@ function teamShell(h) {
    <button class="btn create" onclick="createMenu(event)">＋ <span class="hide-s">Create</span></button>
    <div class="search"><span>🔍</span><input id="q" placeholder="Search tasks, projects, tickets" value="${esc(ui.q)}" oninput="ui.q=this.value;searchDrop()" onfocus="searchDrop()" onblur="setTimeout(()=>$('#sres')&&($('#sres').innerHTML=''),200)"><div id="sres"></div></div>
    <div class="avwrap" onclick="userMenu(event)">${av(u.email, 30)}</div></header>
-  <aside class="side" onclick="if(event.target.closest('a'))ui.drawer=false">
+  <aside class="side" onclick="if(event.target.closest('a'))ui.drawer=false"><button class="btn screate" onclick="createMenu(event)">＋ <span>Create</span></button>
    <nav>${nav.map(n => `<a href="#/${n[0]}" class="${h[0] === n[0] ? 'on' : ''}" title="${n[2]}"><i>${n[1]}</i><span>${n[2]}</span>${n[3] ? `<em class="badge">${n[3]}</em>` : ''}</a>`).join('')}</nav>
-   <div class="sh"><span>Projects</span><a href="#/templates" title="New project" class="plus">＋</a></div>
+   <div class="sh"><span>Work · Projects</span><a href="#/templates" title="New project" class="plus">＋</a></div>
    <nav>${d.clients.map(c => `<a href="#/project/${c.id}/${ui.tab}" class="${h[1] === c.id ? 'on' : ''}" title="${esc(c.name)}"><i>${prjIcon(c, 18)}</i><span>${esc(cname(c))}</span></a>`).join('')}</nav>
    <div class="sh"><span>Teams</span></div>
    <nav><a href="#/team" class="${h[0] === 'team' ? 'on' : ''}" title="Team & logins"><i>👥</i><span>Sparrow team & logins</span></a><a href="#/templates" class="${h[0] === 'templates' ? 'on' : ''}" title="Templates"><i>🧩</i><span>Templates</span></a></nav>
@@ -165,14 +165,14 @@ function reportView() {
 // ---------- PROJECT ----------
 function projectView(id, tab) {
   const c = cl(id); if (!c.id) return page('Project not found');
-  tab = ui.tab = ['overview', 'list', 'board', 'timeline', 'dashboard', 'calendar', 'files'].includes(tab) ? tab : 'list';
-  const tabs = [['overview', 'Overview'], ['list', 'List'], ['board', 'Board'], ['timeline', 'Timeline'], ['dashboard', 'Dashboard'], ['calendar', 'Calendar'], ['files', 'Files']];
+  tab = ui.tab = ['overview', 'list', 'board', 'timeline', 'dashboard', 'calendar', 'messages', 'files'].includes(tab) ? tab : 'list';
+  const tabs = [['overview', 'Overview'], ['list', 'List'], ['board', 'Board'], ['timeline', 'Timeline'], ['dashboard', 'Dashboard'], ['calendar', 'Calendar'], ['messages', 'Messages'], ['files', 'Files']];
   const head = `<div class="prhead"><div class="prtitle">${prjIcon(c, 34)}<div style="min-width:0"><h1 class="ell">${esc(c.name)}</h1><div class="mute ell">${esc(c.project || '')} · ${prog(id)}% complete</div></div>
    ${me().role === 'admin' ? `<button class="iconbtn" title="Edit project" onclick="editClient('${id}')">⌄</button>` : ''}<span style="flex:1"></span><span class="avs hide-s">${[...new Set(ptasks(c).map(t => t.assignee).filter(Boolean))].slice(0, 4).map(e => av(e, 26)).join('')}</span>
-   ${me().role === 'admin' ? `<button class="btn sm" onclick="editUser(null,'${id}')" title="Give the client a login">👤 Share</button>` : ''}</div>
+   ${me().role === 'admin' ? `<button class="btn sm" onclick="editUser(null,'${id}')" title="Give the client a login">👤 Share</button>` : ''}<button class="btn ghost sm hide-s" onclick="customizeMenu(event,'${id}')">⚙ Customize</button></div>
    <div class="ptabs">${tabs.map(([k, l]) => `<a href="#/project/${id}/${k}" class="${tab === k ? 'on' : ''}">${l}</a>`).join('')}</div></div>
-   ${['list', 'board'].includes(tab) ? `<div class="toolbar"><button class="btn sm" onclick="newTask('${id}')">＋ Add task</button><button class="btn ghost sm" onclick="addSection('${id}')">＋ Add section</button></div>` : ''}`;
-  return head + { dashboard: pdashTab, overview: overviewTab, list: listTab, board: boardTab, timeline: timelineTab, calendar: calendarTab, files: filesTab }[tab](c);
+   ${tab === 'list' ? listToolbar(c) : tab === 'board' ? `<div class="toolbar"><button class="btn sm" onclick="newTask('${id}')">＋ Add task</button><button class="btn ghost sm" onclick="addSection('${id}')">＋ Add section</button></div>` : ''}`;
+  return head + { dashboard: pdashTab, overview: overviewTab, list: listTab, board: boardTab, timeline: timelineTab, calendar: calendarTab, messages: messagesTab, files: filesTab, list: listTabV3 }[tab](c);
 }
 const ptasks = c => D().tasks.filter(t => t.clientId === c.id).sort((a, b) => (a.order || 0) - (b.order || 0));
 function listHead(showP) { return `<div class="lrow lhead"><span class="c-name">Task name</span><span class="c-as">Assignee</span><span class="c-due">Due date</span><span class="c-pr">Priority</span><span class="c-st">Status</span>${showP ? '<span class="c-prj">Project</span>' : '<span class="c-vis">Client</span>'}</div>`; }
